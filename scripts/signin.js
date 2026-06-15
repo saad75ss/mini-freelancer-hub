@@ -1,118 +1,118 @@
 // Tab switching
-const tabs = document.querySelectorAll('.signin_tab');
-const signInLink = document.querySelector('.create-account-text a');
+const tabs = document.querySelectorAll(".signin_tab");
+const signInLink = document.querySelector(".create-account-text a");
 
-tabs.forEach(tab => {
-  tab.addEventListener('click', () => {
+tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
     // Remove active class from all tabs
-    tabs.forEach(t => t.classList.remove('signin_tab_active'));
-    
+    tabs.forEach((t) => t.classList.remove("signin_tab_active"));
+
     // Add active class to clicked tab
-    tab.classList.add('signin_tab_active');
-    
+    tab.classList.add("signin_tab_active");
+
     // Navigate based on tab content
-    if (tab.textContent.includes('Create Account')) {
-      window.location.href = '/pages/register.html';
+    if (tab.textContent.includes("Create Account")) {
+      window.location.href = "/pages/register.html";
     }
   });
 });
 
 // Link to register page
 if (signInLink) {
-  signInLink.addEventListener('click', (e) => {
+  signInLink.addEventListener("click", (e) => {
     e.preventDefault();
-    window.location.href = '/pages/register.html';
+    window.location.href = "/pages/register.html";
   });
 }
 
 // Form submission
-const signInForm = document.querySelector('.primary_button');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
+const signInForm = document.querySelector(".primary_button");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
 
 async function handleSignIn() {
-  const loginUrl = 'https://freelancerhubbackend.onrender.com/auth/login';
+  const loginUrl = "https://freelancerhubbackend.onrender.com/api/login/";
   const payload = {
-    email: emailInput.value,  
-    password: passwordInput.value
+    email: emailInput.value.trim(),
+    password: passwordInput.value.trim(),
   };
 
   try {
     const response = await fetch(loginUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
     const data = await response.json();
-    if (response.ok) {
-      showMessage('Sign in successful! Redirecting...', 'success');
-      // Store token and user info in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setTimeout(() => {
-        window.location.href = '/pages/employee-dashboard.html';
-      }, 1500);
+    if (!response.ok) {
+      throw new Error(data.message || "Login failed");
+    }
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+      window.location.href = "/pages/employee-dashboard.html";
     } else {
-      showMessage('Invalid credentials. Please try again.', 'error');
+      throw new Error(
+        "Authentication token not received. Login may have succeeded but cannot proceed without token.",
+      );
     }
   } catch (error) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
 
     if (isCorsOrNetworkError(error)) {
       const fallbackUser = validateLoginLocally(payload);
       if (fallbackUser) {
-        localStorage.setItem('token', 'local-token-' + Date.now());
-        localStorage.setItem('user', JSON.stringify(fallbackUser));
-        showMessage('Server blocked by CORS. Logged in locally for now. Redirecting...', 'info');
+        localStorage.setItem("token", "local-token-" + Date.now());
+        localStorage.setItem("user", JSON.stringify(fallbackUser));
+        showMessage(
+          "Server blocked by CORS. Logged in locally for now. Redirecting...",
+          "info",
+        );
         setTimeout(() => {
-          window.location.href = '/pages/employee-dashboard.html';
+          window.location.href = "/pages/employee-dashboard.html";
         }, 1500);
       } else {
-        showMessage('No local account found. Please register first.', 'error');
+        showMessage("No local account found. Please register first.", "error");
       }
     } else {
-      showMessage('Sign in failed. Please try again.', 'error');
+      showMessage("Sign in failed. Please try again.", "error");
     }
   }
 }
 if (signInForm) {
-  signInForm.addEventListener('click', (e) => {
+  signInForm.addEventListener("click", (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!emailInput.value.trim()) {
-      showMessage('Please enter your email', 'error');
+      errorMessage.textContent = "Please enter your email";
       emailInput.focus();
       return;
     }
-    
+
     if (!isValidEmail(emailInput.value)) {
-      showMessage('Please enter a valid email address', 'error');
+      errorMessage.textContent = "Please enter a valid email address";
       emailInput.focus();
       return;
     }
-    
+
     if (!passwordInput.value.trim()) {
-      showMessage('Please enter your password', 'error');
+      errorMessage.textContent = "Please enter your password";
       passwordInput.focus();
       return;
     }
-    
+
     if (passwordInput.value.length < 6) {
-      showMessage('Password must be at least 6 characters', 'error');
+      showMessage("Password must be at least 6 characters", "error");
       passwordInput.focus();
       return;
     }
-    
+
     // Call API handler
     handleSignIn();
   });
 }
-
-
-
 
 // Utility functions
 function isValidEmail(email) {
@@ -125,25 +125,31 @@ function isCorsOrNetworkError(error) {
     return false;
   }
 
-  const message = String(error.message || '').toLowerCase();
-  return error.name === 'TypeError' || message.includes('failed to fetch') || message.includes('networkerror');
+  const message = String(error.message || "").toLowerCase();
+  return (
+    error.name === "TypeError" ||
+    message.includes("failed to fetch") ||
+    message.includes("networkerror")
+  );
 }
 
 function validateLoginLocally(payload) {
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const user = users.find(u => u.email === payload.email && u.password === payload.password);
+  const users = JSON.parse(localStorage.getItem("users") || "[]");
+  const user = users.find(
+    (u) => u.email === payload.email && u.password === payload.password,
+  );
   return user || null;
 }
 
 function showMessage(message, type) {
   // Remove existing messages
-  const existingMessage = document.querySelector('.auth_message');
+  const existingMessage = document.querySelector(".auth_message");
   if (existingMessage) {
     existingMessage.remove();
   }
-  
+
   // Create message element
-  const messageDiv = document.createElement('div');
+  const messageDiv = document.createElement("div");
   messageDiv.className = `auth_message auth_message_${type}`;
   messageDiv.textContent = message;
   messageDiv.style.cssText = `
@@ -157,22 +163,22 @@ function showMessage(message, type) {
     font-weight: 500;
     z-index: 1000;
     animation: slideDown 0.3s ease;
-    ${type === 'error' ? 'background: #fee; color: #c33;' : ''}
-    ${type === 'success' ? 'background: #efe; color: #3c3;' : ''}
-    ${type === 'info' ? 'background: #eef; color: #33c;' : ''}
+    ${type === "error" ? "background: #fee; color: #c33;" : ""}
+    ${type === "success" ? "background: #efe; color: #3c3;" : ""}
+    ${type === "info" ? "background: #eef; color: #33c;" : ""}
   `;
-  
+
   document.body.appendChild(messageDiv);
-  
+
   // Auto remove after 3 seconds
   setTimeout(() => {
-    messageDiv.style.animation = 'slideUp 0.3s ease';
+    messageDiv.style.animation = "slideUp 0.3s ease";
     setTimeout(() => messageDiv.remove(), 300);
   }, 3000);
 }
 
 // Add animation styles
-const style = document.createElement('style');
+const style = document.createElement("style");
 style.textContent = `
   @keyframes slideDown {
     from {
@@ -199,8 +205,8 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Enter key to submit
-passwordInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
+passwordInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
     signInForm.click();
   }
 });
